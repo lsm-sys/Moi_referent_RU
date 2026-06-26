@@ -6,11 +6,17 @@
   --color-manuscript: #faf6ec;
   --color-bark: #4a3728;
   --color-bark-muted: #7d6655;
+  --color-red: #9b2d2d;
+  --color-red-soft: #b84242;
+  --color-red-pale: #f2d6d6;
   --color-burgundy: #8b4a4a;
   --color-burgundy-soft: #a86464;
-  --color-gold: #c4a574;
-  --color-gold-pale: #e8d5b0;
+  --color-gold: #c9922a;
+  --color-gold-bright: #e0ad3a;
+  --color-gold-pale: #f5e6c0;
+  --color-gold-deep: #a67c1a;
   --color-border-warm: #d4c4a8;
+  --color-border-gold: #c9a227;
 }
 
 body {
@@ -21,10 +27,12 @@ body {
 .ancient-rus-bg {
   background-color: #ebe0c8;
   background-image:
-    radial-gradient(ellipse 80% 50% at 15% 10%, rgba(196, 165, 116, 0.28) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 45% at 85% 90%, rgba(139, 74, 74, 0.1) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(250, 246, 236, 0.5) 0%, transparent 70%),
-    linear-gradient(165deg, #f2e8d4 0%, #e9dcc4 38%, #dfd0b4 72%, #d4c4a8 100%);
+    radial-gradient(ellipse 85% 55% at 10% 5%, rgba(224, 173, 58, 0.32) 0%, transparent 55%),
+    radial-gradient(ellipse 75% 50% at 92% 8%, rgba(155, 45, 45, 0.14) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 45% at 88% 92%, rgba(201, 146, 42, 0.22) 0%, transparent 52%),
+    radial-gradient(ellipse 65% 40% at 8% 88%, rgba(155, 45, 45, 0.12) 0%, transparent 48%),
+    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(250, 246, 236, 0.45) 0%, transparent 70%),
+    linear-gradient(165deg, #f5ead0 0%, #edd9b8 35%, #e4cfa0 68%, #dcc89a 100%);
 }
 
 .ancient-rus-bg::before {
@@ -32,16 +40,65 @@ body {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: 0.35;
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c4a574' fill-opacity='0.12'%3E%3Cpath d='M30 0l4 8 8 2-6 6 2 8-8-4-8 4 2-8-6-6 8-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.4;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9922a' fill-opacity='0.16'%3E%3Cpath d='M30 0l4 8 8 2-6 6 2 8-8-4-8 4 2-8-6-6 8-2z'/%3E%3C/g%3E%3Cg fill='%239b2d2d' fill-opacity='0.07'%3E%3Cpath d='M0 30l8 4 2 8 6-6 8 2-4-8 4-8-8 2-6-6 2-8z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   z-index: 0;
 }
 
 .ancient-rus-card {
-  background: rgba(250, 246, 236, 0.88);
-  border: 1px solid var(--color-border-warm);
+  background: rgba(252, 247, 235, 0.92);
+  border: 1px solid var(--color-border-gold);
   box-shadow:
-    0 1px 2px rgba(74, 55, 40, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 2px 8px rgba(155, 45, 45, 0.06),
+    0 1px 2px rgba(201, 146, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(201, 146, 42, 0.15);
   backdrop-filter: blur(4px);
+}
+
+.ancient-rus-card-accent {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-gold-bright) 15%,
+    var(--color-red) 50%,
+    var(--color-gold-bright) 85%,
+    transparent 100%
+  );
+  margin-bottom: 1.25rem;
+}
+
+.ancient-rus-title {
+  background: linear-gradient(135deg, var(--color-red) 0%, var(--color-gold-deep) 55%, var(--color-gold-bright) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ancient-rus-btn {
+  border: 1px solid var(--color-border-gold);
+  background: linear-gradient(180deg, rgba(245, 230, 192, 0.7) 0%, rgba(232, 220, 196, 0.5) 100%);
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.ancient-rus-btn:hover:not(:disabled) {
+  border-color: var(--color-red-soft);
+  background: linear-gradient(180deg, rgba(242, 214, 214, 0.5) 0%, rgba(245, 230, 192, 0.8) 100%);
+  box-shadow: 0 2px 8px rgba(201, 146, 42, 0.2);
+}
+
+.ancient-rus-btn-label {
+  color: var(--color-red);
+}
+
+.ancient-rus-section-title {
+  color: var(--color-red);
+}
+
+.ancient-rus-badge {
+  background: linear-gradient(135deg, var(--color-gold-pale) 0%, var(--color-red-pale) 100%);
+  border: 1px solid var(--color-border-gold);
+  color: var(--color-red);
 }

@@ -61,8 +61,8 @@ export default function ArticleProcessor() {
 
   return (
     <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col gap-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-bark">
+      <header className="space-y-2 text-center sm:text-left">
+        <h1 className="ancient-rus-title text-3xl font-bold tracking-tight">
           Moi referent RU
         </h1>
         <p className="text-bark-muted">
@@ -71,7 +71,8 @@ export default function ArticleProcessor() {
       </header>
 
       <section className="ancient-rus-card rounded-2xl p-6">
-        <label htmlFor="article-url" className="mb-2 block text-sm font-medium text-bark">
+        <div className="ancient-rus-card-accent" />
+        <label htmlFor="article-url" className="mb-2 block text-sm font-medium text-red">
           URL франкоязычной статьи
         </label>
         <input
@@ -80,7 +81,7 @@ export default function ArticleProcessor() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://example.fr/article..."
-          className="w-full rounded-xl border border-border-warm bg-parchment/60 px-4 py-3 text-bark placeholder:text-bark-muted/60 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/25"
+          className="w-full rounded-xl border border-border-gold bg-gold-pale/30 px-4 py-3 text-bark placeholder:text-bark-muted/60 focus:border-red-soft focus:outline-none focus:ring-2 focus:ring-gold/30"
         />
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -90,46 +91,47 @@ export default function ArticleProcessor() {
               type="button"
               disabled={isDisabled}
               onClick={() => handleAction(action.id)}
-              className="flex flex-col items-start rounded-xl border border-border-warm bg-parchment-deep/50 px-4 py-3 text-left transition hover:border-burgundy-soft/50 hover:bg-gold-pale/40 disabled:cursor-not-allowed disabled:opacity-50"
+              className="ancient-rus-btn flex flex-col items-start rounded-xl px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span className="font-semibold text-bark">{action.label}</span>
-              <span className="mt-1 text-xs text-bark-muted">{action.description}</span>
+              <span className="ancient-rus-btn-label font-semibold">{action.label}</span>
+              <span className="mt-1 text-xs text-gold-deep">{action.description}</span>
             </button>
           ))}
         </div>
       </section>
 
       <section className="ancient-rus-card rounded-2xl p-6">
+        <div className="ancient-rus-card-accent" />
         <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold text-bark">Результат</h2>
+          <h2 className="ancient-rus-section-title text-lg font-semibold">Результат</h2>
           {activeLabel && (
-            <span className="rounded-full bg-gold-pale px-3 py-1 text-xs font-medium text-burgundy">
+            <span className="ancient-rus-badge rounded-full px-3 py-1 text-xs font-medium">
               {activeLabel}
             </span>
           )}
         </div>
 
         {loading && (
-          <div className="flex items-center gap-3 rounded-xl bg-parchment-deep/60 px-4 py-8 text-bark-muted">
-            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-border-warm border-t-burgundy" />
+          <div className="flex items-center gap-3 rounded-xl border border-border-gold/50 bg-gold-pale/40 px-4 py-8 text-bark-muted">
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-gold border-t-red" />
             Парсинг статьи...
           </div>
         )}
 
         {!loading && error && (
-          <div className="rounded-xl border border-burgundy/30 bg-burgundy/10 px-4 py-3 text-burgundy">
+          <div className="rounded-xl border border-red/40 bg-red-pale px-4 py-3 text-red">
             {error}
           </div>
         )}
 
         {!loading && !error && !result && (
-          <p className="rounded-xl bg-parchment-deep/60 px-4 py-8 text-center text-bark-muted">
+          <p className="rounded-xl border border-dashed border-border-gold/60 bg-gold-pale/25 px-4 py-8 text-center text-bark-muted">
             Результат появится здесь после нажатия на одну из кнопок.
           </p>
         )}
 
         {!loading && result && (
-          <pre className="whitespace-pre-wrap rounded-xl bg-parchment-deep/60 px-4 py-4 text-sm leading-relaxed text-bark">
+          <pre className="whitespace-pre-wrap rounded-xl border border-border-gold/40 bg-gold-pale/20 px-4 py-4 text-sm leading-relaxed text-bark">
             {result}
           </pre>
         )}
