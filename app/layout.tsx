@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Moi referent RU",
-  description: "Обработка для соцсетей",
+  description: "Обработка франкоязычных статей для соцсетей",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body>{children}</body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
