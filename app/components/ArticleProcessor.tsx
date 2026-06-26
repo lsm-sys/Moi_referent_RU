@@ -6,6 +6,7 @@ import {
   ACTIONS,
   type ActionType,
 } from "@/lib/actions";
+import { formatUserError } from "@/lib/errors";
 
 export default function ArticleProcessor() {
   const [url, setUrl] = useState("");
@@ -27,16 +28,24 @@ export default function ArticleProcessor() {
         body: JSON.stringify({ url, action }),
       });
 
-      const data = await response.json();
+      const raw = await response.text();
+      let data: { error?: string; result?: string } = {};
+
+      try {
+        data = raw ? (JSON.parse(raw) as { error?: string; result?: string }) : {};
+      } catch {
+        setError(formatUserError(new Error(raw || "Не удалось выполнить запрос")));
+        return;
+      }
 
       if (!response.ok) {
-        setError(data.error ?? "Не удалось выполнить запрос");
+        setError(data.error ?? formatUserError(new Error(raw)));
         return;
       }
 
       setResult(typeof data.result === "string" ? data.result : "");
-    } catch {
-      setError("Ошибка сети. Проверьте подключение и попробуйте снова.");
+    } catch (error) {
+      setError(formatUserError(error));
     } finally {
       setLoading(false);
     }

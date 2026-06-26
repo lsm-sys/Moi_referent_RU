@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import type { AnyNode, Element } from "domhandler";
 
 export interface ParsedArticle {
   date: string | null;
@@ -6,19 +7,51 @@ export interface ParsedArticle {
   content: string | null;
 }
 
+const MIN_CONTENT_LENGTH = 120;
+
 const CONTENT_SELECTORS = [
   "article",
   '[role="article"]',
+  '[itemprop="articleBody"]',
+  "#article-body",
+  ".article-body",
+  ".article__content",
+  ".article__body",
+  ".article-content",
+  ".article-content__paragraph",
+  ".article__paragraph",
+  ".fig-content-body",
+  ".fig-standfirst",
   ".post-content",
   ".entry-content",
-  ".article-content",
-  ".article-body",
-  ".article__body",
+  ".content-body",
+  ".story-body",
+  ".text-content",
   ".post",
   ".content",
   "main article",
   "main",
 ];
+
+const NOISE_SELECTORS = [
+  "script",
+  "style",
+  "noscript",
+  "nav",
+  "footer",
+  "aside",
+  "header",
+  "form",
+  ".share",
+  ".comments",
+  ".related",
+  ".advertisement",
+  ".ad",
+  ".newsletter",
+  ".paywall",
+  ".subscription",
+  '[aria-hidden="true"]',
+].join(", ");
 
 const DATE_META_SELECTORS = [
   'meta[property="article:published_time"]',
@@ -44,6 +77,28 @@ function cleanDate(value: string | undefined | null): string | null {
   return new Date(parsed).toISOString();
 }
 
+function isElement(node: AnyNode): node is Element {
+  return node.type === "tag";
+}
+
+function extractTextFromBlock($: cheerio.CheerioAPI, element: AnyNode): string | null {
+  if (!isElement(element)) return null;
+  const block = $(element).clone();
+  block.find(NOISE_SELECTORS).remove();
+
+  const paragraphs = block
+    .find("p, li")
+    .map((_, node) => cleanText($(node).text()))
+    .get()
+    .filter((text): text is string => Boolean(text && text.length > 30));
+
+  if (paragraphs.length > 0) {
+    return paragraphs.join("\n\n");
+  }
+
+  return cleanText(block.text());
+}
+
 function extractTitle($: cheerio.CheerioAPI): string | null {
   const candidates = [
     $('meta[property="og:title"]').attr("content"),
@@ -61,29 +116,65 @@ function extractTitle($: cheerio.CheerioAPI): string | null {
   return null;
 }
 
-function extractDateFromJsonLd($: cheerio.CheerioAPI): string | null {
-  let found: string | null = null;
+function parseJsonLdNodes(data: unknown): Record<string, unknown>[] {
+  if (!data) return [];
+  if (Array.isArray(data)) {
+    return data.flatMap((item) => parseJsonLdNodes(item));
+  }
+  if (typeof data !== "object") return [];
+
+  const record = data as Record<string, unknown>;
+  const nodes: Record<string, unknown>[] = [record];
+
+  if (record["@graph"]) {
+    nodes.push(...parseJsonLdNodes(record["@graph"]));
+  }
+
+  return nodes;
+}
+
+function extractFromJsonLd($: cheerio.CheerioAPI): {
+  date: string | null;
+  content: string | null;
+} {
+  let date: string | null = null;
+  let content: string | null = null;
 
   $('script[type="application/ld+json"]').each((_, element) => {
-    if (found) return;
+    if (date && content) return;
 
     try {
       const raw = $(element).html();
       if (!raw) return;
 
       const data = JSON.parse(raw) as unknown;
-      const items = Array.isArray(data) ? data : [data];
+      const items = parseJsonLdNodes(data);
 
       for (const item of items) {
-        if (!item || typeof item !== "object") continue;
+        const typeValue = item["@type"];
+        const types = Array.isArray(typeValue)
+          ? typeValue.map(String)
+          : [String(typeValue ?? "")];
+        const isArticle = types.some((type) =>
+          /Article|NewsArticle|BlogPosting|ReportageNewsArticle/i.test(type),
+        );
 
-        const record = item as Record<string, unknown>;
-        const dateValue =
-          record.datePublished ?? record.dateCreated ?? record.uploadDate;
+        if (!date) {
+          const dateValue =
+            item.datePublished ?? item.dateCreated ?? item.uploadDate;
+          if (typeof dateValue === "string") {
+            date = cleanDate(dateValue);
+          }
+        }
 
-        if (typeof dateValue === "string") {
-          found = cleanDate(dateValue);
-          if (found) return;
+        if (!content) {
+          const body = item.articleBody ?? item.description;
+          if (typeof body === "string") {
+            const text = cleanText(body);
+            if (text && text.length >= MIN_CONTENT_LENGTH) {
+              content = text;
+            }
+          }
         }
       }
     } catch {
@@ -91,7 +182,7 @@ function extractDateFromJsonLd($: cheerio.CheerioAPI): string | null {
     }
   });
 
-  return found;
+  return { date, content };
 }
 
 function extractDate($: cheerio.CheerioAPI): string | null {
@@ -105,31 +196,16 @@ function extractDate($: cheerio.CheerioAPI): string | null {
   const timeDate = cleanDate(timeValue);
   if (timeDate) return timeDate;
 
-  return extractDateFromJsonLd($);
+  return extractFromJsonLd($).date;
 }
 
-function extractContent($: cheerio.CheerioAPI): string | null {
+function extractContentFromSelectors($: cheerio.CheerioAPI): string | null {
   let bestContent: string | null = null;
   let bestLength = 0;
 
   for (const selector of CONTENT_SELECTORS) {
     $(selector).each((_, element) => {
-      const block = $(element).clone();
-      block
-        .find(
-          "script, style, noscript, nav, footer, aside, header, .share, .comments, .related, .advertisement, .ad",
-        )
-        .remove();
-
-      const paragraphs = block
-        .find("p")
-        .map((__, paragraph) => cleanText($(paragraph).text()))
-        .get()
-        .filter((text): text is string => Boolean(text));
-
-      const text =
-        paragraphs.length > 0 ? paragraphs.join("\n\n") : cleanText(block.text());
-
+      const text = extractTextFromBlock($, element);
       if (text && text.length > bestLength) {
         bestLength = text.length;
         bestContent = text;
@@ -138,6 +214,34 @@ function extractContent($: cheerio.CheerioAPI): string | null {
   }
 
   return bestContent;
+}
+
+function extractContentFromParagraphs($: cheerio.CheerioAPI): string | null {
+  const paragraphs = $("article p, main p, [role='article'] p, .article p")
+    .map((_, node) => cleanText($(node).text()))
+    .get()
+    .filter((text): text is string => Boolean(text && text.length > 40));
+
+  if (paragraphs.length === 0) return null;
+
+  const unique = [...new Set(paragraphs)];
+  const text = unique.join("\n\n");
+  return text.length >= MIN_CONTENT_LENGTH ? text : null;
+}
+
+function extractContent($: cheerio.CheerioAPI): string | null {
+  const fromSelectors = extractContentFromSelectors($);
+  if (fromSelectors && fromSelectors.length >= MIN_CONTENT_LENGTH) {
+    return fromSelectors;
+  }
+
+  const fromJsonLd = extractFromJsonLd($).content;
+  if (fromJsonLd) return fromJsonLd;
+
+  const fromParagraphs = extractContentFromParagraphs($);
+  if (fromParagraphs) return fromParagraphs;
+
+  return fromSelectors && fromSelectors.length > 0 ? fromSelectors : null;
 }
 
 export function parseArticleHtml(html: string): ParsedArticle {
@@ -151,14 +255,25 @@ export function parseArticleHtml(html: string): ParsedArticle {
 }
 
 export async function fetchAndParseArticle(url: string): Promise<ParsedArticle> {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; MoiReferentRU/1.0; +https://github.com/)",
-      Accept: "text/html,application/xhtml+xml",
-      "Accept-Language": "fr,en;q=0.9",
-    },
-    signal: AbortSignal.timeout(20000),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+        "Cache-Control": "no-cache",
+      },
+      signal: AbortSignal.timeout(45_000),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("timeout: сайт не ответил вовремя");
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     throw new Error(`Не удалось загрузить страницу (${response.status})`);
@@ -167,8 +282,10 @@ export async function fetchAndParseArticle(url: string): Promise<ParsedArticle> 
   const html = await response.text();
   const parsed = parseArticleHtml(html);
 
-  if (!parsed.title && !parsed.content) {
-    throw new Error("Не удалось извлечь заголовок и текст статьи");
+  if (!parsed.content?.trim()) {
+    throw new Error(
+      "Не удалось извлечь текст статьи. Сайт может блокировать парсинг или использовать нестандартную вёрстку.",
+    );
   }
 
   return parsed;

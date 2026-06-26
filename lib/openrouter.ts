@@ -5,8 +5,22 @@ import {
   buildTelegramPrompt,
 } from "@/lib/prompts";
 
-const OPENROUTER_URL =
-  process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1/chat/completions";
+const PARSE_TIMEOUT_MS = 45_000;
+const AI_TIMEOUT_MS = 120_000;
+
+function getOpenRouterUrl(): string {
+  const raw =
+    process.env.OPENROUTER_BASE_URL ??
+    process.env.OPENAI_BASE_URL ??
+    "https://openrouter.ai/api/v1/chat/completions";
+
+  if (raw.includes("/chat/completions")) {
+    return raw;
+  }
+
+  return `${raw.replace(/\/$/, "")}/chat/completions`;
+}
+
 export const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3.1";
 
 type ChatCompletionResponse = {
@@ -41,20 +55,30 @@ export async function callOpenRouter(
     throw new Error("Не задан OPENROUTER_API_KEY");
   }
 
-  const response = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": process.env.OPENROUTER_SITE_URL ?? "https://moi-referent-ru.vercel.app",
-      "X-Title": "Moi referent RU",
-    },
-    body: JSON.stringify({
-      model: DEEPSEEK_MODEL,
-      messages: [{ role: "user", content: prompt }],
-      temperature: options.temperature ?? 0.3,
-    }),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(getOpenRouterUrl(), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.OPENROUTER_SITE_URL ?? "https://moi-referent-ru.vercel.app",
+        "X-Title": "Moi referent RU",
+      },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        messages: [{ role: "user", content: prompt }],
+        temperature: options.temperature ?? 0.3,
+      }),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("timeout: OpenRouter не ответил вовремя");
+    }
+    throw error;
+  }
 
   const data = (await response.json()) as ChatCompletionResponse;
 
@@ -99,3 +123,5 @@ export async function generateTelegramPost(article: ParsedArticle): Promise<stri
     emptyResponseMessage: "OpenRouter не вернул пост для Telegram",
   });
 }
+
+export { PARSE_TIMEOUT_MS, AI_TIMEOUT_MS };

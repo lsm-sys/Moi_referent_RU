@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ACTION_LABELS, type ActionType } from "@/lib/actions";
+import { formatUserError } from "@/lib/errors";
 import {
   generateDzenPost,
   generateTelegramPost,
   summarizeArticle,
 } from "@/lib/openrouter";
 import { fetchAndParseArticle, type ParsedArticle } from "@/lib/parse-article";
+
+export const maxDuration = 60;
 
 type ActionHandler = (article: ParsedArticle) => Promise<string>;
 
@@ -41,9 +44,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ result, action });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Ошибка при обработке статьи";
+    const message = formatUserError(error);
+    const isTimeout = message.includes("Превышено время ожидания");
 
-    return NextResponse.json({ error: message }, { status: 422 });
+    return NextResponse.json(
+      { error: message },
+      { status: isTimeout ? 504 : 422 },
+    );
   }
 }
