@@ -1,22 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-parchment: #f5eedc;
-  --color-parchment-deep: #e8dcc4;
-  --color-manuscript: #faf6ec;
-  --color-bark: #4a3728;
-  --color-bark-muted: #7d6655;
-  --color-red: #9b2d2d;
-  --color-red-soft: #b84242;
-  --color-red-pale: #f2d6d6;
-  --color-burgundy: #8b4a4a;
-  --color-burgundy-soft: #a86464;
-  --color-gold: #c9922a;
-  --color-gold-bright: #e0ad3a;
-  --color-gold-pale: #f5e6c0;
-  --color-gold-deep: #a67c1a;
-  --color-border-warm: #d4c4a8;
-  --color-border-gold: #c9a227;
+  --color-sky: #b8d8ef;
+  --color-sky-light: #d9ecf8;
+  --color-meadow: #7db068;
+  --color-meadow-deep: #4d8a3a;
+  --color-meadow-pale: #b8d4a0;
+  --color-meadow-light: #c8dfa8;
+  --color-rye: #d4b04a;
+  --color-rye-bright: #e8cc6a;
+  --color-rye-pale: #f2e4b0;
+  --color-flax: #f5f2ea;
+  --color-flax-flower: #e8e4d8;
+  --color-sarafan: #c42828;
+  --color-scarlet: #dc2f2f;
+  --color-scarlet-soft: #e84848;
+  --color-scarlet-pale: #fcd8d8;
+  --color-sarafan-pale: #fad0d0;
+  --color-bark: #3d4540;
+  --color-bark-muted: #5c6b62;
+  --color-border-warm: #ddb8b0;
+  --color-border-scarlet: #dc4040;
+  --color-border-rye: #c9a84a;
 }
 
 body {
@@ -24,81 +29,106 @@ body {
   min-height: 100vh;
 }
 
+/* Небо → ржаное поле → луг, с алыми акцентами */
 .ancient-rus-bg {
-  background-color: #ebe0c8;
+  background-color: var(--color-sky-light);
   background-image:
-    radial-gradient(ellipse 85% 55% at 10% 5%, rgba(224, 173, 58, 0.32) 0%, transparent 55%),
-    radial-gradient(ellipse 75% 50% at 92% 8%, rgba(155, 45, 45, 0.14) 0%, transparent 50%),
-    radial-gradient(ellipse 70% 45% at 88% 92%, rgba(201, 146, 42, 0.22) 0%, transparent 52%),
-    radial-gradient(ellipse 65% 40% at 8% 88%, rgba(155, 45, 45, 0.12) 0%, transparent 48%),
-    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(250, 246, 236, 0.45) 0%, transparent 70%),
-    linear-gradient(165deg, #f5ead0 0%, #edd9b8 35%, #e4cfa0 68%, #dcc89a 100%);
-}
-
-.ancient-rus-bg::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.4;
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9922a' fill-opacity='0.16'%3E%3Cpath d='M30 0l4 8 8 2-6 6 2 8-8-4-8 4 2-8-6-6 8-2z'/%3E%3C/g%3E%3Cg fill='%239b2d2d' fill-opacity='0.07'%3E%3Cpath d='M0 30l8 4 2 8 6-6 8 2-4-8 4-8-8 2-6-6 2-8z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  z-index: 0;
+    linear-gradient(
+      180deg,
+      #d9ecf8 0%,
+      #c5dff0 20%,
+      #b8d8ef 32%,
+      #d8e8a8 50%,
+      #e8cc6a 60%,
+      #dcc058 68%,
+      #c4d89a 78%,
+      #9ec878 88%,
+      #6a9e52 100%
+    ),
+    radial-gradient(ellipse 90% 50% at 50% 52%, rgba(232, 204, 106, 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 72% 44%, rgba(252, 248, 238, 0.8) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 28% at 28% 50%, rgba(240, 235, 220, 0.5) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 35% at 10% 38%, rgba(220, 47, 47, 0.16) 0%, transparent 68%),
+    radial-gradient(ellipse 35% 28% at 90% 42%, rgba(232, 72, 72, 0.14) 0%, transparent 65%),
+    radial-gradient(ellipse 38% 26% at 55% 58%, rgba(252, 216, 216, 0.45) 0%, transparent 70%),
+    radial-gradient(ellipse 30% 24% at 78% 62%, rgba(220, 47, 47, 0.1) 0%, transparent 68%),
+    radial-gradient(ellipse 55% 30% at 50% 92%, rgba(106, 158, 82, 0.25) 0%, transparent 70%);
 }
 
 .ancient-rus-card {
-  background: rgba(252, 247, 235, 0.92);
-  border: 1px solid var(--color-border-gold);
+  background: rgba(255, 248, 246, 0.92);
+  border: 1px solid rgba(220, 64, 64, 0.3);
   box-shadow:
-    0 2px 8px rgba(155, 45, 45, 0.06),
-    0 1px 2px rgba(201, 146, 42, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    inset 0 -1px 0 rgba(201, 146, 42, 0.15);
-  backdrop-filter: blur(4px);
+    0 4px 20px rgba(106, 158, 82, 0.08),
+    0 2px 10px rgba(220, 47, 47, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
 }
 
 .ancient-rus-card-accent {
   height: 3px;
   border-radius: 999px;
+  margin-bottom: 1.25rem;
   background: linear-gradient(
     90deg,
-    transparent 0%,
-    var(--color-gold-bright) 15%,
-    var(--color-red) 50%,
-    var(--color-gold-bright) 85%,
-    transparent 100%
+    var(--color-scarlet) 0%,
+    var(--color-scarlet-soft) 25%,
+    var(--color-rye-bright) 50%,
+    var(--color-scarlet-soft) 75%,
+    var(--color-scarlet) 100%
   );
-  margin-bottom: 1.25rem;
+  opacity: 0.92;
 }
 
 .ancient-rus-title {
-  background: linear-gradient(135deg, var(--color-red) 0%, var(--color-gold-deep) 55%, var(--color-gold-bright) 100%);
+  background: linear-gradient(
+    120deg,
+    var(--color-scarlet) 0%,
+    var(--color-scarlet-soft) 40%,
+    var(--color-rye-bright) 75%,
+    var(--color-scarlet) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .ancient-rus-btn {
-  border: 1px solid var(--color-border-gold);
-  background: linear-gradient(180deg, rgba(245, 230, 192, 0.7) 0%, rgba(232, 220, 196, 0.5) 100%);
+  border: 1px solid rgba(220, 64, 64, 0.45);
+  background: linear-gradient(
+    180deg,
+    rgba(252, 216, 216, 0.45) 0%,
+    rgba(242, 228, 176, 0.5) 100%
+  );
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
 .ancient-rus-btn:hover:not(:disabled) {
-  border-color: var(--color-red-soft);
-  background: linear-gradient(180deg, rgba(242, 214, 214, 0.5) 0%, rgba(245, 230, 192, 0.8) 100%);
-  box-shadow: 0 2px 8px rgba(201, 146, 42, 0.2);
+  border-color: var(--color-scarlet);
+  background: linear-gradient(
+    180deg,
+    rgba(252, 216, 216, 0.75) 0%,
+    rgba(242, 228, 176, 0.7) 100%
+  );
+  box-shadow: 0 2px 14px rgba(220, 47, 47, 0.2);
 }
 
 .ancient-rus-btn-label {
-  color: var(--color-red);
+  color: var(--color-scarlet);
 }
 
 .ancient-rus-section-title {
-  color: var(--color-red);
+  color: var(--color-scarlet);
 }
 
 .ancient-rus-badge {
-  background: linear-gradient(135deg, var(--color-gold-pale) 0%, var(--color-red-pale) 100%);
-  border: 1px solid var(--color-border-gold);
-  color: var(--color-red);
+  background: linear-gradient(135deg, var(--color-scarlet-pale) 0%, var(--color-rye-pale) 100%);
+  border: 1px solid var(--color-border-scarlet);
+  color: var(--color-scarlet);
+}
+
+.ancient-rus-input:focus {
+  border-color: var(--color-scarlet-soft);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(224, 69, 69, 0.2);
 }

@@ -72,7 +72,7 @@ export default function ArticleProcessor() {
 
       <section className="ancient-rus-card rounded-2xl p-6">
         <div className="ancient-rus-card-accent" />
-        <label htmlFor="article-url" className="mb-2 block text-sm font-medium text-red">
+        <label htmlFor="article-url" className="mb-2 block text-sm font-medium text-scarlet">
           URL франкоязычной статьи
         </label>
         <input
@@ -81,7 +81,7 @@ export default function ArticleProcessor() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://example.fr/article..."
-          className="w-full rounded-xl border border-border-gold bg-gold-pale/30 px-4 py-3 text-bark placeholder:text-bark-muted/60 focus:border-red-soft focus:outline-none focus:ring-2 focus:ring-gold/30"
+          className="ancient-rus-input w-full rounded-xl border border-border-scarlet/55 bg-scarlet-pale/15 px-4 py-3 text-bark placeholder:text-bark-muted/60"
         />
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -94,7 +94,7 @@ export default function ArticleProcessor() {
               className="ancient-rus-btn flex flex-col items-start rounded-xl px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span className="ancient-rus-btn-label font-semibold">{action.label}</span>
-              <span className="mt-1 text-xs text-gold-deep">{action.description}</span>
+              <span className="mt-1 text-xs text-bark-muted">{action.description}</span>
             </button>
           ))}
         </div>
@@ -112,26 +112,26 @@ export default function ArticleProcessor() {
         </div>
 
         {loading && (
-          <div className="flex items-center gap-3 rounded-xl border border-border-gold/50 bg-gold-pale/40 px-4 py-8 text-bark-muted">
-            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-gold border-t-red" />
+          <div className="flex items-center gap-3 rounded-xl border border-scarlet/25 bg-scarlet-pale/35 px-4 py-8 text-bark-muted">
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-scarlet-pale border-t-scarlet" />
             Парсинг статьи...
           </div>
         )}
 
         {!loading && error && (
-          <div className="rounded-xl border border-red/40 bg-red-pale px-4 py-3 text-red">
+          <div className="rounded-xl border border-scarlet/35 bg-scarlet-pale px-4 py-3 text-scarlet">
             {error}
           </div>
         )}
 
         {!loading && !error && !result && (
-          <p className="rounded-xl border border-dashed border-border-gold/60 bg-gold-pale/25 px-4 py-8 text-center text-bark-muted">
+          <p className="rounded-xl border border-dashed border-scarlet/25 bg-scarlet-pale/20 px-4 py-8 text-center text-bark-muted">
             Результат появится здесь после нажатия на одну из кнопок.
           </p>
         )}
 
         {!loading && result && (
-          <pre className="whitespace-pre-wrap rounded-xl border border-border-gold/40 bg-gold-pale/20 px-4 py-4 text-sm leading-relaxed text-bark">
+          <pre className="whitespace-pre-wrap rounded-xl border border-scarlet/20 bg-scarlet-pale/10 px-4 py-4 text-sm leading-relaxed text-bark">
             {result}
           </pre>
         )}
