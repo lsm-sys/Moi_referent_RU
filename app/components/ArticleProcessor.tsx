@@ -60,18 +60,18 @@ export default function ArticleProcessor() {
   const activeLabel = ACTIONS.find((a) => a.id === activeAction)?.label;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+    <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col gap-8">
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-3xl font-bold tracking-tight text-bark">
           Moi referent RU
         </h1>
-        <p className="text-slate-600">
+        <p className="text-bark-muted">
           Вставьте ссылку на франкоязычную статью и выберите нужное действие.
         </p>
       </header>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <label htmlFor="article-url" className="mb-2 block text-sm font-medium text-slate-700">
+      <section className="ancient-rus-card rounded-2xl p-6">
+        <label htmlFor="article-url" className="mb-2 block text-sm font-medium text-bark">
           URL франкоязычной статьи
         </label>
         <input
@@ -80,7 +80,7 @@ export default function ArticleProcessor() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://example.fr/article..."
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="w-full rounded-xl border border-border-warm bg-parchment/60 px-4 py-3 text-bark placeholder:text-bark-muted/60 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/25"
         />
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -90,46 +90,46 @@ export default function ArticleProcessor() {
               type="button"
               disabled={isDisabled}
               onClick={() => handleAction(action.id)}
-              className="flex flex-col items-start rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex flex-col items-start rounded-xl border border-border-warm bg-parchment-deep/50 px-4 py-3 text-left transition hover:border-burgundy-soft/50 hover:bg-gold-pale/40 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span className="font-semibold text-slate-900">{action.label}</span>
-              <span className="mt-1 text-xs text-slate-500">{action.description}</span>
+              <span className="font-semibold text-bark">{action.label}</span>
+              <span className="mt-1 text-xs text-bark-muted">{action.description}</span>
             </button>
           ))}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="ancient-rus-card rounded-2xl p-6">
         <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold text-slate-900">Результат</h2>
+          <h2 className="text-lg font-semibold text-bark">Результат</h2>
           {activeLabel && (
-            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+            <span className="rounded-full bg-gold-pale px-3 py-1 text-xs font-medium text-burgundy">
               {activeLabel}
             </span>
           )}
         </div>
 
         {loading && (
-          <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-8 text-slate-600">
-            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+          <div className="flex items-center gap-3 rounded-xl bg-parchment-deep/60 px-4 py-8 text-bark-muted">
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-border-warm border-t-burgundy" />
             Парсинг статьи...
           </div>
         )}
 
         {!loading && error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+          <div className="rounded-xl border border-burgundy/30 bg-burgundy/10 px-4 py-3 text-burgundy">
             {error}
           </div>
         )}
 
         {!loading && !error && !result && (
-          <p className="rounded-xl bg-slate-50 px-4 py-8 text-center text-slate-500">
+          <p className="rounded-xl bg-parchment-deep/60 px-4 py-8 text-center text-bark-muted">
             Результат появится здесь после нажатия на одну из кнопок.
           </p>
         )}
 
         {!loading && result && (
-          <pre className="whitespace-pre-wrap rounded-xl bg-slate-50 px-4 py-4 text-sm leading-relaxed text-slate-800">
+          <pre className="whitespace-pre-wrap rounded-xl bg-parchment-deep/60 px-4 py-4 text-sm leading-relaxed text-bark">
             {result}
           </pre>
         )}

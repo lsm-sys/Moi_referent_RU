@@ -1,1 +1,47 @@
 @import "tailwindcss";
+
+@theme {
+  --color-parchment: #f5eedc;
+  --color-parchment-deep: #e8dcc4;
+  --color-manuscript: #faf6ec;
+  --color-bark: #4a3728;
+  --color-bark-muted: #7d6655;
+  --color-burgundy: #8b4a4a;
+  --color-burgundy-soft: #a86464;
+  --color-gold: #c4a574;
+  --color-gold-pale: #e8d5b0;
+  --color-border-warm: #d4c4a8;
+}
+
+body {
+  color: var(--color-bark);
+  min-height: 100vh;
+}
+
+.ancient-rus-bg {
+  background-color: #ebe0c8;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 15% 10%, rgba(196, 165, 116, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 45% at 85% 90%, rgba(139, 74, 74, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(250, 246, 236, 0.5) 0%, transparent 70%),
+    linear-gradient(165deg, #f2e8d4 0%, #e9dcc4 38%, #dfd0b4 72%, #d4c4a8 100%);
+}
+
+.ancient-rus-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c4a574' fill-opacity='0.12'%3E%3Cpath d='M30 0l4 8 8 2-6 6 2 8-8-4-8 4 2-8-6-6 8-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  z-index: 0;
+}
+
+.ancient-rus-card {
+  background: rgba(250, 246, 236, 0.88);
+  border: 1px solid var(--color-border-warm);
+  box-shadow:
+    0 1px 2px rgba(74, 55, 40, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+}
