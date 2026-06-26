@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ActionType } from "@/lib/actions";
+import { ACTION_LOADING_LABELS } from "@/lib/actions";
 
 const ACTIONS: { id: ActionType; label: string; description: string }[] = [
   {
@@ -18,6 +19,11 @@ const ACTIONS: { id: ActionType; label: string; description: string }[] = [
     id: "telegram",
     label: "Пост для Telegram",
     description: "Текст для публикации в Telegram",
+  },
+  {
+    id: "translate",
+    label: "Перевод",
+    description: "Полный перевод на русский",
   },
 ];
 
@@ -58,6 +64,7 @@ export default function ArticleProcessor() {
 
   const isDisabled = !url.trim() || loading;
   const activeLabel = ACTIONS.find((a) => a.id === activeAction)?.label;
+  const loadingLabel = activeAction ? ACTION_LOADING_LABELS[activeAction] : "Обработка...";
 
   return (
     <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col gap-8">
@@ -84,7 +91,7 @@ export default function ArticleProcessor() {
           className="ancient-rus-input w-full rounded-xl border border-border-scarlet/55 bg-scarlet-pale/15 px-4 py-3 text-bark placeholder:text-bark-muted/60"
         />
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {ACTIONS.map((action) => (
             <button
               key={action.id}
@@ -114,7 +121,7 @@ export default function ArticleProcessor() {
         {loading && (
           <div className="flex items-center gap-3 rounded-xl border border-scarlet/25 bg-scarlet-pale/35 px-4 py-8 text-bark-muted">
             <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-scarlet-pale border-t-scarlet" />
-            Парсинг статьи...
+            {loadingLabel}
           </div>
         )}
 
