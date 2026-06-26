@@ -1,31 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { ActionType } from "@/lib/actions";
-import { ACTION_LOADING_LABELS } from "@/lib/actions";
-
-const ACTIONS: { id: ActionType; label: string; description: string }[] = [
-  {
-    id: "summary",
-    label: "О чем статья?",
-    description: "Краткое содержание на русском",
-  },
-  {
-    id: "dzen",
-    label: "Пост для Дзен",
-    description: "Текст для публикации в Дзен",
-  },
-  {
-    id: "telegram",
-    label: "Пост для Telegram",
-    description: "Текст для публикации в Telegram",
-  },
-  {
-    id: "translate",
-    label: "Перевод",
-    description: "Полный перевод на русский",
-  },
-];
+import {
+  ACTION_LOADING_LABELS,
+  ACTIONS,
+  type ActionType,
+} from "@/lib/actions";
 
 export default function ArticleProcessor() {
   const [url, setUrl] = useState("");
@@ -54,7 +34,7 @@ export default function ArticleProcessor() {
         return;
       }
 
-      setResult(data.result);
+      setResult(typeof data.result === "string" ? data.result : "");
     } catch {
       setError("Ошибка сети. Проверьте подключение и попробуйте снова.");
     } finally {
@@ -63,7 +43,6 @@ export default function ArticleProcessor() {
   }
 
   const isDisabled = !url.trim() || loading;
-  const activeLabel = ACTIONS.find((a) => a.id === activeAction)?.label;
   const loadingLabel = activeAction ? ACTION_LOADING_LABELS[activeAction] : "Обработка...";
 
   return (
@@ -91,19 +70,26 @@ export default function ArticleProcessor() {
           className="ancient-rus-input w-full rounded-xl border border-border-scarlet/55 bg-scarlet-pale/15 px-4 py-3 text-bark placeholder:text-bark-muted/60"
         />
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {ACTIONS.map((action) => (
-            <button
-              key={action.id}
-              type="button"
-              disabled={isDisabled}
-              onClick={() => handleAction(action.id)}
-              className="ancient-rus-btn flex flex-col items-start rounded-xl px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="ancient-rus-btn-label font-semibold">{action.label}</span>
-              <span className="mt-1 text-xs text-bark-muted">{action.description}</span>
-            </button>
-          ))}
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          {ACTIONS.map((action) => {
+            const isActive = loading && activeAction === action.id;
+
+            return (
+              <button
+                key={action.id}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => handleAction(action.id)}
+                aria-busy={isActive}
+                className={`ancient-rus-btn flex flex-col items-start rounded-xl px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isActive ? "border-scarlet ring-2 ring-scarlet/25" : ""
+                }`}
+              >
+                <span className="ancient-rus-btn-label font-semibold">{action.label}</span>
+                <span className="mt-1 text-xs text-bark-muted">{action.description}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -111,9 +97,9 @@ export default function ArticleProcessor() {
         <div className="ancient-rus-card-accent" />
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 className="ancient-rus-section-title text-lg font-semibold">Результат</h2>
-          {activeLabel && (
+          {activeAction && !loading && result && (
             <span className="ancient-rus-badge rounded-full px-3 py-1 text-xs font-medium">
-              {activeLabel}
+              {ACTIONS.find((a) => a.id === activeAction)?.label}
             </span>
           )}
         </div>
@@ -138,9 +124,11 @@ export default function ArticleProcessor() {
         )}
 
         {!loading && result && (
-          <pre className="whitespace-pre-wrap rounded-xl border border-scarlet/20 bg-scarlet-pale/10 px-4 py-4 text-sm leading-relaxed text-bark">
-            {result}
-          </pre>
+          <div className="result-scroll max-h-[36rem] overflow-y-auto rounded-xl border border-scarlet/20 bg-scarlet-pale/10">
+            <p className="whitespace-pre-wrap px-4 py-4 text-sm leading-relaxed text-bark">
+              {result}
+            </p>
+          </div>
         )}
       </section>
     </div>

@@ -1,10 +1,13 @@
 import type { ParsedArticle } from "@/lib/parse-article";
+import {
+  buildDzenPrompt,
+  buildSummaryPrompt,
+  buildTelegramPrompt,
+} from "@/lib/prompts";
 
 const OPENROUTER_URL =
   process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1/chat/completions";
-const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3.1";
-
-const MAX_CONTENT_LENGTH = 12000;
+export const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3.1";
 
 type ChatCompletionResponse = {
   choices?: Array<{
@@ -17,38 +20,25 @@ type ChatCompletionResponse = {
   };
 };
 
-function buildTranslationPrompt(article: ParsedArticle): string {
-  const parts: string[] = [
-    "Переведи франкоязычную статью на русский язык.",
-    "Сохрани смысл, структуру и абзацы. Выведи только перевод без комментариев.",
-  ];
+export type OpenRouterOptions = {
+  temperature?: number;
+  emptyResponseMessage?: string;
+};
 
-  if (article.title) {
-    parts.push(`\nЗаголовок: ${article.title}`);
+function ensureArticleContent(article: ParsedArticle): void {
+  if (!article.content?.trim()) {
+    throw new Error("Не удалось извлечь текст статьи");
   }
-
-  if (article.date) {
-    parts.push(`Дата: ${article.date}`);
-  }
-
-  let content = article.content ?? "";
-  if (content.length > MAX_CONTENT_LENGTH) {
-    content = `${content.slice(0, MAX_CONTENT_LENGTH)}\n\n[Текст обрезан для перевода]`;
-  }
-
-  parts.push(`\nТекст статьи:\n${content}`);
-  return parts.join("\n");
 }
 
-export async function translateArticle(article: ParsedArticle): Promise<string> {
+export async function callOpenRouter(
+  prompt: string,
+  options: OpenRouterOptions = {},
+): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
     throw new Error("Не задан OPENROUTER_API_KEY");
-  }
-
-  if (!article.content?.trim()) {
-    throw new Error("Не удалось извлечь текст статьи для перевода");
   }
 
   const response = await fetch(OPENROUTER_URL, {
@@ -61,13 +51,8 @@ export async function translateArticle(article: ParsedArticle): Promise<string> 
     },
     body: JSON.stringify({
       model: DEEPSEEK_MODEL,
-      messages: [
-        {
-          role: "user",
-          content: buildTranslationPrompt(article),
-        },
-      ],
-      temperature: 0.3,
+      messages: [{ role: "user", content: prompt }],
+      temperature: options.temperature ?? 0.3,
     }),
   });
 
@@ -77,11 +62,40 @@ export async function translateArticle(article: ParsedArticle): Promise<string> 
     throw new Error(data.error?.message ?? `Ошибка OpenRouter (${response.status})`);
   }
 
-  const translation = data.choices?.[0]?.message?.content?.trim();
+  const content = data.choices?.[0]?.message?.content?.trim();
 
-  if (!translation) {
-    throw new Error("OpenRouter не вернул перевод");
+  if (!content) {
+    throw new Error(options.emptyResponseMessage ?? "OpenRouter не вернул ответ");
   }
 
-  return translation;
+  return content;
+}
+
+async function generateFromArticle(
+  article: ParsedArticle,
+  buildPrompt: (article: ParsedArticle) => string,
+  options?: OpenRouterOptions,
+): Promise<string> {
+  ensureArticleContent(article);
+  return callOpenRouter(buildPrompt(article), options);
+}
+
+export async function summarizeArticle(article: ParsedArticle): Promise<string> {
+  return generateFromArticle(article, buildSummaryPrompt, {
+    emptyResponseMessage: "OpenRouter не вернул краткое содержание",
+  });
+}
+
+export async function generateDzenPost(article: ParsedArticle): Promise<string> {
+  return generateFromArticle(article, buildDzenPrompt, {
+    temperature: 0.5,
+    emptyResponseMessage: "OpenRouter не вернул пост для Дзен",
+  });
+}
+
+export async function generateTelegramPost(article: ParsedArticle): Promise<string> {
+  return generateFromArticle(article, buildTelegramPrompt, {
+    temperature: 0.5,
+    emptyResponseMessage: "OpenRouter не вернул пост для Telegram",
+  });
 }

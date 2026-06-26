@@ -132,3 +132,17 @@ body {
   outline: none;
   box-shadow: 0 0 0 2px rgba(224, 69, 69, 0.2);
 }
+
+.result-scroll {
+  scrollbar-color: rgba(220, 47, 47, 0.35) transparent;
+  scrollbar-width: thin;
+}
+
+.result-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.result-scroll::-webkit-scrollbar-thumb {
+  background: rgba(220, 47, 47, 0.25);
+  border-radius: 999px;
+}
