@@ -62,7 +62,6 @@ export default function ArticleProcessor() {
   const [copyLabel, setCopyLabel] = useState("Копировать");
 
   const resultSectionRef = useRef<HTMLElement>(null);
-  const shouldScrollToResultRef = useRef(false);
 
   function handleClear() {
     setUrl("");
@@ -75,7 +74,6 @@ export default function ArticleProcessor() {
     setError(null);
     setActiveAction(null);
     setCopyLabel("Копировать");
-    shouldScrollToResultRef.current = false;
   }
 
   async function handleCopy() {
@@ -93,13 +91,10 @@ export default function ArticleProcessor() {
   }
 
   useEffect(() => {
-    if (!shouldScrollToResultRef.current || loading || !result) {
-      return;
+    if (loading) {
+      resultSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-
-    shouldScrollToResultRef.current = false;
-    resultSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [result, loading]);
+  }, [loading]);
 
   useEffect(() => {
     const trimmed = url.trim();
@@ -114,6 +109,7 @@ export default function ArticleProcessor() {
 
     setPreviewLoading(true);
 
+    let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
         const response = await fetch("/api/parse", {
@@ -121,6 +117,8 @@ export default function ArticleProcessor() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: trimmed }),
         });
+
+        if (cancelled) return;
 
         const raw = await response.text();
         let data: ParseResponse = {};
@@ -141,13 +139,21 @@ export default function ArticleProcessor() {
           setPreview(data.preview);
         }
       } catch {
-        setPreviewError("Не удалось загрузить предпросмотр.");
+        if (!cancelled) {
+          setPreviewError("Не удалось загрузить предпросмотр.");
+        }
       } finally {
-        setPreviewLoading(false);
+        if (!cancelled) {
+          setPreviewLoading(false);
+        }
       }
     }, PREVIEW_DEBOUNCE_MS);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      setPreviewLoading(false);
+    };
   }, [url]);
 
   async function handleTextAction(action: Exclude<ActionType, "illustration">) {
@@ -159,7 +165,6 @@ export default function ArticleProcessor() {
     setActiveAction(action);
     setLoading(true);
     setLoadingLabel(ACTION_LOADING_LABELS[action]);
-    shouldScrollToResultRef.current = false;
 
     try {
       const response = await fetch("/api/generate", {
@@ -193,7 +198,6 @@ export default function ArticleProcessor() {
       }
 
       const nextResult = typeof data.result === "string" ? data.result : "";
-      shouldScrollToResultRef.current = Boolean(nextResult);
       setResultType("text");
       setResult(nextResult);
     } catch {
@@ -212,7 +216,6 @@ export default function ArticleProcessor() {
     setActiveAction("illustration");
     setLoading(true);
     setLoadingLabel(ACTION_LOADING_LABELS.illustration);
-    shouldScrollToResultRef.current = false;
 
     try {
       const response = await fetch("/api/illustrate", {
@@ -244,7 +247,6 @@ export default function ArticleProcessor() {
       }
 
       const nextResult = typeof data.result === "string" ? data.result : "";
-      shouldScrollToResultRef.current = Boolean(nextResult);
       setResultType("image");
       setResult(nextResult);
       setImagePrompt(typeof data.imagePrompt === "string" ? data.imagePrompt : "");
@@ -264,7 +266,7 @@ export default function ArticleProcessor() {
     void handleTextAction(action);
   }
 
-  const isDisabled = !url.trim() || loading || previewLoading;
+  const isDisabled = !url.trim() || loading || !isValidUrl(url.trim());
   const hasContent = Boolean(url || preview || result || error || activeAction || imagePrompt);
   const copyButtonLabel = resultType === "image" ? (copyLabel === "Копировать" ? "Копировать промпт" : copyLabel) : copyLabel;
 
