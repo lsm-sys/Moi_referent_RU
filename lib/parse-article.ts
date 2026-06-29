@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import type { AnyNode, Element } from "domhandler";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 
 export interface ParsedArticle {
   date: string | null;
@@ -266,26 +267,27 @@ export async function fetchAndParseArticle(url: string): Promise<ParsedArticle> 
         "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
         "Cache-Control": "no-cache",
       },
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(10_000),
     });
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("timeout: сайт не ответил вовремя");
+    if (error instanceof AppError) {
+      throw error;
     }
-    throw error;
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new AppError(ERROR_CODES.ARTICLE_FETCH_FAILED);
+    }
+    throw new AppError(ERROR_CODES.ARTICLE_FETCH_FAILED);
   }
 
   if (!response.ok) {
-    throw new Error(`Не удалось загрузить страницу (${response.status})`);
+    throw new AppError(ERROR_CODES.ARTICLE_FETCH_FAILED);
   }
 
   const html = await response.text();
   const parsed = parseArticleHtml(html);
 
   if (!parsed.content?.trim()) {
-    throw new Error(
-      "Не удалось извлечь текст статьи. Сайт может блокировать парсинг или использовать нестандартную вёрстку.",
-    );
+    throw new AppError(ERROR_CODES.ARTICLE_CONTENT_EMPTY);
   }
 
   return parsed;

@@ -1,25 +1,80 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ErrorAlert } from "@/app/components/ErrorAlert";
 import {
   ACTION_LOADING_LABELS,
   ACTIONS,
   type ActionType,
 } from "@/lib/actions";
-import { formatUserError } from "@/lib/errors";
+import {
+  ERROR_CODES,
+  getErrorPayload,
+  type AppErrorPayload,
+  type ErrorCode,
+} from "@/lib/errors";
+
+type ApiErrorResponse = {
+  error?: AppErrorPayload;
+  result?: string;
+};
+
+function resolveClientError(payload?: ApiErrorResponse, fallbackCode: ErrorCode = ERROR_CODES.UNKNOWN): AppErrorPayload {
+  if (payload?.error?.code && payload.error.title && payload.error.message) {
+    return payload.error;
+  }
+  return getErrorPayload(fallbackCode);
+}
 
 export default function ArticleProcessor() {
   const [url, setUrl] = useState("");
   const [result, setResult] = useState("");
   const [activeAction, setActiveAction] = useState<ActionType | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<AppErrorPayload | null>(null);
+  const [copyLabel, setCopyLabel] = useState("Копировать");
+
+  const resultSectionRef = useRef<HTMLElement>(null);
+  const shouldScrollToResultRef = useRef(false);
+
+  function handleClear() {
+    setUrl("");
+    setResult("");
+    setError(null);
+    setActiveAction(null);
+    setCopyLabel("Копировать");
+    shouldScrollToResultRef.current = false;
+  }
+
+  async function handleCopy() {
+    if (!result) return;
+
+    try {
+      await navigator.clipboard.writeText(result);
+      setCopyLabel("Скопировано");
+      window.setTimeout(() => setCopyLabel("Копировать"), 2000);
+    } catch {
+      setCopyLabel("Не удалось");
+      window.setTimeout(() => setCopyLabel("Копировать"), 2000);
+    }
+  }
+
+  useEffect(() => {
+    if (!shouldScrollToResultRef.current || loading || !result) {
+      return;
+    }
+
+    shouldScrollToResultRef.current = false;
+    resultSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [result, loading]);
 
   async function handleAction(action: ActionType) {
-    setError("");
+    setError(null);
     setResult("");
+    setCopyLabel("Копировать");
     setActiveAction(action);
     setLoading(true);
+    shouldScrollToResultRef.current = false;
 
     try {
       const response = await fetch("/api/generate", {
@@ -29,23 +84,34 @@ export default function ArticleProcessor() {
       });
 
       const raw = await response.text();
-      let data: { error?: string; result?: string } = {};
+      let data: ApiErrorResponse = {};
 
       try {
-        data = raw ? (JSON.parse(raw) as { error?: string; result?: string }) : {};
+        data = raw ? (JSON.parse(raw) as ApiErrorResponse) : {};
       } catch {
-        setError(formatUserError(new Error(raw || "Не удалось выполнить запрос")));
+        setError(getErrorPayload(ERROR_CODES.NETWORK));
         return;
       }
 
       if (!response.ok) {
-        setError(data.error ?? formatUserError(new Error(raw)));
+        const fallbackCode =
+          response.status === 502
+            ? ERROR_CODES.ARTICLE_FETCH_FAILED
+            : response.status === 504
+              ? ERROR_CODES.AI_TIMEOUT
+              : response.status === 503
+                ? ERROR_CODES.AI_UNAVAILABLE
+                : ERROR_CODES.UNKNOWN;
+
+        setError(resolveClientError(data, fallbackCode));
         return;
       }
 
-      setResult(typeof data.result === "string" ? data.result : "");
-    } catch (error) {
-      setError(formatUserError(error));
+      const nextResult = typeof data.result === "string" ? data.result : "";
+      shouldScrollToResultRef.current = Boolean(nextResult);
+      setResult(nextResult);
+    } catch {
+      setError(getErrorPayload(ERROR_CODES.NETWORK));
     } finally {
       setLoading(false);
     }
@@ -53,6 +119,7 @@ export default function ArticleProcessor() {
 
   const isDisabled = !url.trim() || loading;
   const loadingLabel = activeAction ? ACTION_LOADING_LABELS[activeAction] : "Обработка...";
+  const hasContent = Boolean(url || result || error || activeAction);
 
   return (
     <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col gap-8">
@@ -67,9 +134,19 @@ export default function ArticleProcessor() {
 
       <section className="ancient-rus-card rounded-2xl p-6">
         <div className="ancient-rus-card-accent" />
-        <label htmlFor="article-url" className="mb-2 block text-sm font-medium text-scarlet">
-          URL франкоязычной статьи
-        </label>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <label htmlFor="article-url" className="block text-sm font-medium text-scarlet">
+            URL франкоязычной статьи
+          </label>
+          <button
+            type="button"
+            onClick={handleClear}
+            disabled={loading || !hasContent}
+            className="ancient-rus-btn-secondary rounded-lg px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Очистить
+          </button>
+        </div>
         <input
           id="article-url"
           type="url"
@@ -102,15 +179,26 @@ export default function ArticleProcessor() {
         </div>
       </section>
 
-      <section className="ancient-rus-card rounded-2xl p-6">
+      <section ref={resultSectionRef} className="ancient-rus-card scroll-mt-6 rounded-2xl p-6">
         <div className="ancient-rus-card-accent" />
-        <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="ancient-rus-section-title text-lg font-semibold">Результат</h2>
-          {activeAction && !loading && result && (
-            <span className="ancient-rus-badge rounded-full px-3 py-1 text-xs font-medium">
-              {ACTIONS.find((a) => a.id === activeAction)?.label}
-            </span>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {!loading && result && (
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="ancient-rus-btn-secondary rounded-lg px-3 py-1.5 text-xs font-medium"
+              >
+                {copyLabel}
+              </button>
+            )}
+            {activeAction && !loading && result && (
+              <span className="ancient-rus-badge rounded-full px-3 py-1 text-xs font-medium">
+                {ACTIONS.find((a) => a.id === activeAction)?.label}
+              </span>
+            )}
+          </div>
         </div>
 
         {loading && (
@@ -120,11 +208,7 @@ export default function ArticleProcessor() {
           </div>
         )}
 
-        {!loading && error && (
-          <div className="rounded-xl border border-scarlet/35 bg-scarlet-pale px-4 py-3 text-scarlet">
-            {error}
-          </div>
-        )}
+        {!loading && error && <ErrorAlert error={error} />}
 
         {!loading && !error && !result && (
           <p className="rounded-xl border border-dashed border-scarlet/25 bg-scarlet-pale/20 px-4 py-8 text-center text-bark-muted">

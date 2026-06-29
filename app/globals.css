@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@source "../components";
+
 @theme {
   --color-sky: #b8d8ef;
   --color-sky-light: #d9ecf8;
@@ -111,6 +113,19 @@ body {
     rgba(242, 228, 176, 0.7) 100%
   );
   box-shadow: 0 2px 14px rgba(220, 47, 47, 0.2);
+}
+
+.ancient-rus-btn-secondary {
+  border: 1px solid rgba(220, 64, 64, 0.35);
+  background: rgba(255, 248, 246, 0.85);
+  color: var(--color-scarlet);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.ancient-rus-btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-scarlet);
+  background: rgba(252, 216, 216, 0.55);
+  box-shadow: 0 1px 8px rgba(220, 47, 47, 0.12);
 }
 
 .ancient-rus-btn-label {

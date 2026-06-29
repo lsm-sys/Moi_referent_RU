@@ -1,6 +1,6 @@
 import type { ParsedArticle } from "@/lib/parse-article";
 
-export const MAX_ARTICLE_CONTENT_LENGTH = 12000;
+export const MAX_ARTICLE_CONTENT_LENGTH = 6000;
 
 function trimArticleContent(content: string, truncatedNote: string): string {
   if (content.length <= MAX_ARTICLE_CONTENT_LENGTH) {
@@ -47,7 +47,7 @@ export function buildDzenPrompt(article: ParsedArticle): string {
     "- цепляющий заголовок в первой строке;",
     "- лид, основная часть и мягкий вывод;",
     "- информативный стиль для широкой аудитории;",
-    "- ориентир по объёму: 800–1500 слов;",
+    "- ориентир по объёму: 400–700 слов;",
     "- без служебных пометок и markdown;",
     "- только готовый текст поста.",
     "",
