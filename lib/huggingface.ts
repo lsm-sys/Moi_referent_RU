@@ -1,8 +1,13 @@
+import {
+  InferenceClient,
+  InferenceClientHubApiError,
+  InferenceClientProviderApiError,
+} from "@huggingface/inference";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
-const IMAGE_TIMEOUT_MS = 30_000;
+const IMAGE_TIMEOUT_MS = 45_000;
 
-const DEFAULT_MODEL = "stabilityai/stable-diffusion-xl-base-1.0";
+const DEFAULT_MODEL = "black-forest-labs/FLUX.1-schnell";
 
 function getHuggingFaceApiKey(): string {
   const apiKey = process.env.HUGGINGFACE_API_KEY?.replace(/^["']|["']$/g, "");
@@ -20,12 +25,7 @@ function getHuggingFaceModel(): string {
   );
 }
 
-type HuggingFaceErrorResponse = {
-  error?: string;
-  estimated_time?: number;
-};
-
-function mapHuggingFaceStatus(status: number): AppError {
+function mapHttpStatus(status: number): AppError {
   if (status === 401 || status === 403) {
     return new AppError(ERROR_CODES.IMAGE_UNAVAILABLE);
   }
@@ -34,14 +34,46 @@ function mapHuggingFaceStatus(status: number): AppError {
     return new AppError(ERROR_CODES.IMAGE_FAILED);
   }
 
-  if (status === 503) {
+  if (status === 503 || status === 410 || status === 404) {
     return new AppError(ERROR_CODES.IMAGE_UNAVAILABLE);
   }
 
   return new AppError(ERROR_CODES.IMAGE_FAILED);
 }
 
-export async function generateImageFromPrompt(prompt: string, attempt = 0): Promise<string> {
+function mapInferenceError(error: unknown): AppError {
+  if (error instanceof AppError) {
+    return error;
+  }
+
+  if (
+    error instanceof InferenceClientProviderApiError ||
+    error instanceof InferenceClientHubApiError
+  ) {
+    return mapHttpStatus(error.httpResponse.status);
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+
+    if (error.name === "AbortError" || message.includes("timeout")) {
+      return new AppError(ERROR_CODES.AI_TIMEOUT);
+    }
+
+    if (
+      message.includes("unauthorized") ||
+      message.includes("forbidden") ||
+      message.includes("api key") ||
+      message.includes("authentication")
+    ) {
+      return new AppError(ERROR_CODES.IMAGE_UNAVAILABLE);
+    }
+  }
+
+  return new AppError(ERROR_CODES.IMAGE_FAILED);
+}
+
+export async function generateImageFromPrompt(prompt: string): Promise<string> {
   const apiKey = getHuggingFaceApiKey();
   const model = getHuggingFaceModel();
   const trimmedPrompt = prompt.trim();
@@ -50,62 +82,34 @@ export async function generateImageFromPrompt(prompt: string, attempt = 0): Prom
     throw new AppError(ERROR_CODES.IMAGE_FAILED);
   }
 
-  if (attempt > 1) {
-    throw new AppError(ERROR_CODES.IMAGE_UNAVAILABLE);
-  }
-
-  let response: Response;
+  const client = new InferenceClient(apiKey);
 
   try {
-    response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+    const dataUrl = await client.textToImage(
+      {
+        model,
+        inputs: trimmedPrompt,
+        provider: "auto",
+        parameters: {
+          num_inference_steps: model.includes("schnell") ? 4 : 20,
+        },
       },
-      body: JSON.stringify({ inputs: trimmedPrompt }),
-      signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
-    });
+      {
+        outputType: "dataUrl",
+        fetch: (url, init) =>
+          fetch(url, {
+            ...init,
+            signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
+          }),
+      },
+    );
+
+    if (!dataUrl.startsWith("data:image/")) {
+      throw new AppError(ERROR_CODES.IMAGE_FAILED);
+    }
+
+    return dataUrl;
   } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new AppError(ERROR_CODES.AI_TIMEOUT);
-    }
-    throw new AppError(ERROR_CODES.IMAGE_FAILED);
+    throw mapInferenceError(error);
   }
-
-  const contentType = response.headers.get("content-type") ?? "";
-
-  if (contentType.includes("application/json")) {
-    const data = (await response.json()) as HuggingFaceErrorResponse;
-
-    if (data.error?.toLowerCase().includes("loading")) {
-      const waitSeconds = Math.min(Math.max(data.estimated_time ?? 15, 5), 25);
-      await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
-      return generateImageFromPrompt(prompt, attempt + 1);
-    }
-
-    if (!response.ok) {
-      throw mapHuggingFaceStatus(response.status);
-    }
-
-    throw new AppError(ERROR_CODES.IMAGE_FAILED);
-  }
-
-  if (!response.ok) {
-    throw mapHuggingFaceStatus(response.status);
-  }
-
-  const buffer = await response.arrayBuffer();
-
-  if (buffer.byteLength === 0) {
-    throw new AppError(ERROR_CODES.IMAGE_FAILED);
-  }
-
-  const mime = contentType.startsWith("image/") ? contentType.split(";")[0] : "image/jpeg";
-  const base64 = Buffer.from(buffer).toString("base64");
-
-  return `data:${mime};base64,${base64}`;
 }
