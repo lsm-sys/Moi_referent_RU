@@ -1,14 +1,12 @@
-import { after, NextRequest, NextResponse } from "next/server";
-import { ERROR_CODES, getErrorPayload } from "@/lib/errors";
+import { NextRequest, NextResponse } from "next/server";
+import {
+  AppError,
+  ERROR_CODES,
+  createErrorResponse,
+  getErrorPayload,
+} from "@/lib/errors";
 import { getArticleByUrl } from "@/lib/get-article";
 import { generateArticleIllustration } from "@/lib/illustration";
-import {
-  completeIllustrationJob,
-  createIllustrationJob,
-  failIllustrationJob,
-  setIllustrationJobPhase,
-  toIllustrationJobResponse,
-} from "@/lib/illustration-jobs";
 
 export const maxDuration = 60;
 
@@ -23,23 +21,6 @@ function parseRequestUrl(raw: unknown): string | null {
     return url;
   } catch {
     return null;
-  }
-}
-
-async function runIllustrationJob(jobId: string, url: string): Promise<void> {
-  try {
-    setIllustrationJobPhase(jobId, "prompt");
-    const { article } = await getArticleByUrl(url);
-
-    setIllustrationJobPhase(jobId, "image");
-    const illustration = await generateArticleIllustration(article);
-
-    completeIllustrationJob(jobId, {
-      result: illustration.result,
-      imagePrompt: illustration.imagePrompt,
-    });
-  } catch (error) {
-    failIllustrationJob(jobId, error);
   }
 }
 
@@ -64,9 +45,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const job = createIllustrationJob();
+  try {
+    const { article } = await getArticleByUrl(url);
+    const illustration = await generateArticleIllustration(article);
 
-  after(() => runIllustrationJob(job.id, url));
+    return NextResponse.json({
+      resultType: "image" as const,
+      result: illustration.result,
+      imagePrompt: illustration.imagePrompt,
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: getErrorPayload(error.code) },
+        { status: error.httpStatus },
+      );
+    }
 
-  return NextResponse.json(toIllustrationJobResponse(job), { status: 202 });
+    const { body: errorBody, status } = createErrorResponse(error);
+    return NextResponse.json(errorBody, { status });
+  }
 }
