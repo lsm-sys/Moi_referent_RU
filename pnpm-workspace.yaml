@@ -1,4 +1,5 @@
 allowBuilds:
-  sharp: set this to true or false
+  sharp: true
+
 minimumReleaseAgeExclude:
   - lucide-react@1.22.0

@@ -7,6 +7,8 @@ export const ERROR_CODES = {
   AI_TIMEOUT: "ai_timeout",
   AI_FAILED: "ai_failed",
   AI_UNAVAILABLE: "ai_unavailable",
+  IMAGE_FAILED: "image_failed",
+  IMAGE_UNAVAILABLE: "image_unavailable",
   NETWORK: "network",
   UNKNOWN: "unknown",
 } as const;
@@ -61,6 +63,16 @@ export const ERROR_CATALOG: Record<ErrorCode, AppErrorPayload> = {
     title: "Сервис недоступен",
     message: "Сервис генерации временно недоступен. Попробуйте позже.",
   },
+  [ERROR_CODES.IMAGE_FAILED]: {
+    code: ERROR_CODES.IMAGE_FAILED,
+    title: "Ошибка иллюстрации",
+    message: "Не удалось сгенерировать изображение. Попробуйте повторить запрос через минуту.",
+  },
+  [ERROR_CODES.IMAGE_UNAVAILABLE]: {
+    code: ERROR_CODES.IMAGE_UNAVAILABLE,
+    title: "Сервис изображений недоступен",
+    message: "Сервис генерации изображений временно недоступен. Попробуйте позже.",
+  },
   [ERROR_CODES.NETWORK]: {
     code: ERROR_CODES.NETWORK,
     title: "Проблема с сетью",
@@ -99,6 +111,7 @@ function getDefaultHttpStatus(code: ErrorCode): number {
     case ERROR_CODES.AI_TIMEOUT:
       return 504;
     case ERROR_CODES.AI_UNAVAILABLE:
+    case ERROR_CODES.IMAGE_UNAVAILABLE:
       return 503;
     case ERROR_CODES.NETWORK:
       return 503;

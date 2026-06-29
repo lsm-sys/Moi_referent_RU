@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ACTION_LABELS, type ActionType } from "@/lib/actions";
+import { ACTION_LABELS, type ActionType, type ResultType } from "@/lib/actions";
 import {
   AppError,
   ERROR_CODES,
   createErrorResponse,
   getErrorPayload,
 } from "@/lib/errors";
+import { generateArticleIllustration } from "@/lib/illustration";
 import {
   generateDzenPost,
   generateTelegramPost,
@@ -15,9 +16,9 @@ import { fetchAndParseArticle, type ParsedArticle } from "@/lib/parse-article";
 
 export const maxDuration = 60;
 
-type ActionHandler = (article: ParsedArticle) => Promise<string>;
+type TextActionHandler = (article: ParsedArticle) => Promise<string>;
 
-const ACTION_HANDLERS: Record<ActionType, ActionHandler> = {
+const TEXT_ACTION_HANDLERS: Record<Exclude<ActionType, "illustration">, TextActionHandler> = {
   summary: summarizeArticle,
   dzen: generateDzenPost,
   telegram: generateTelegramPost,
@@ -64,10 +65,26 @@ export async function POST(request: NextRequest) {
 
   try {
     const parsed = await fetchAndParseArticle(url);
-    const handler = ACTION_HANDLERS[action];
+
+    if (action === "illustration") {
+      const illustration = await generateArticleIllustration(parsed);
+
+      return NextResponse.json({
+        action,
+        resultType: illustration.resultType satisfies ResultType,
+        result: illustration.result,
+        imagePrompt: illustration.imagePrompt,
+      });
+    }
+
+    const handler = TEXT_ACTION_HANDLERS[action];
     const result = await handler(parsed);
 
-    return NextResponse.json({ result, action });
+    return NextResponse.json({
+      action,
+      resultType: "text" satisfies ResultType,
+      result,
+    });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json(

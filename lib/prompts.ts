@@ -69,3 +69,17 @@ export function buildTelegramPrompt(article: ParsedArticle): string {
     articleContext(article, "Текст обрезан"),
   ].join("\n");
 }
+
+export function buildIllustrationPrompt(article: ParsedArticle): string {
+  return [
+    "You create prompts for AI image generation (Stable Diffusion). Based on the French article below, write one English prompt for an editorial illustration.",
+    "Requirements:",
+    "- 50–90 words, one paragraph;",
+    "- concrete visual scene reflecting the article theme;",
+    "- editorial illustration, cinematic lighting, detailed;",
+    "- no markdown, no quotes, no labels;",
+    "- output only the English prompt.",
+    "",
+    articleContext(article, "Text truncated"),
+  ].join("\n");
+}

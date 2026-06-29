@@ -6,6 +6,7 @@ import {
   ACTION_LOADING_LABELS,
   ACTIONS,
   type ActionType,
+  type ResultType,
 } from "@/lib/actions";
 import {
   ERROR_CODES,
@@ -14,12 +15,14 @@ import {
   type ErrorCode,
 } from "@/lib/errors";
 
-type ApiErrorResponse = {
-  error?: AppErrorPayload;
+type ApiSuccessResponse = {
   result?: string;
+  resultType?: ResultType;
+  imagePrompt?: string;
+  error?: AppErrorPayload;
 };
 
-function resolveClientError(payload?: ApiErrorResponse, fallbackCode: ErrorCode = ERROR_CODES.UNKNOWN): AppErrorPayload {
+function resolveClientError(payload?: ApiSuccessResponse, fallbackCode: ErrorCode = ERROR_CODES.UNKNOWN): AppErrorPayload {
   if (payload?.error?.code && payload.error.title && payload.error.message) {
     return payload.error;
   }
@@ -29,6 +32,8 @@ function resolveClientError(payload?: ApiErrorResponse, fallbackCode: ErrorCode 
 export default function ArticleProcessor() {
   const [url, setUrl] = useState("");
   const [result, setResult] = useState("");
+  const [resultType, setResultType] = useState<ResultType>("text");
+  const [imagePrompt, setImagePrompt] = useState("");
   const [activeAction, setActiveAction] = useState<ActionType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppErrorPayload | null>(null);
@@ -40,6 +45,8 @@ export default function ArticleProcessor() {
   function handleClear() {
     setUrl("");
     setResult("");
+    setResultType("text");
+    setImagePrompt("");
     setError(null);
     setActiveAction(null);
     setCopyLabel("Копировать");
@@ -47,10 +54,11 @@ export default function ArticleProcessor() {
   }
 
   async function handleCopy() {
-    if (!result) return;
+    const textToCopy = resultType === "image" ? imagePrompt : result;
+    if (!textToCopy) return;
 
     try {
-      await navigator.clipboard.writeText(result);
+      await navigator.clipboard.writeText(textToCopy);
       setCopyLabel("Скопировано");
       window.setTimeout(() => setCopyLabel("Копировать"), 2000);
     } catch {
@@ -71,6 +79,8 @@ export default function ArticleProcessor() {
   async function handleAction(action: ActionType) {
     setError(null);
     setResult("");
+    setResultType("text");
+    setImagePrompt("");
     setCopyLabel("Копировать");
     setActiveAction(action);
     setLoading(true);
@@ -84,10 +94,10 @@ export default function ArticleProcessor() {
       });
 
       const raw = await response.text();
-      let data: ApiErrorResponse = {};
+      let data: ApiSuccessResponse = {};
 
       try {
-        data = raw ? (JSON.parse(raw) as ApiErrorResponse) : {};
+        data = raw ? (JSON.parse(raw) as ApiSuccessResponse) : {};
       } catch {
         setError(getErrorPayload(ERROR_CODES.NETWORK));
         return;
@@ -108,8 +118,12 @@ export default function ArticleProcessor() {
       }
 
       const nextResult = typeof data.result === "string" ? data.result : "";
+      const nextResultType = data.resultType === "image" ? "image" : "text";
+
       shouldScrollToResultRef.current = Boolean(nextResult);
+      setResultType(nextResultType);
       setResult(nextResult);
+      setImagePrompt(typeof data.imagePrompt === "string" ? data.imagePrompt : "");
     } catch {
       setError(getErrorPayload(ERROR_CODES.NETWORK));
     } finally {
@@ -119,7 +133,8 @@ export default function ArticleProcessor() {
 
   const isDisabled = !url.trim() || loading;
   const loadingLabel = activeAction ? ACTION_LOADING_LABELS[activeAction] : "Обработка...";
-  const hasContent = Boolean(url || result || error || activeAction);
+  const hasContent = Boolean(url || result || error || activeAction || imagePrompt);
+  const copyButtonLabel = resultType === "image" ? (copyLabel === "Копировать" ? "Копировать промпт" : copyLabel) : copyLabel;
 
   return (
     <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-6 sm:gap-8">
@@ -156,7 +171,7 @@ export default function ArticleProcessor() {
           className="ancient-rus-input w-full min-w-0 rounded-xl border border-border-scarlet/55 bg-scarlet-pale/15 px-4 py-3 text-base text-bark break-all placeholder:text-bark-muted/60 sm:text-sm"
         />
 
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {ACTIONS.map((action) => {
             const isActive = loading && activeAction === action.id;
 
@@ -195,7 +210,7 @@ export default function ArticleProcessor() {
                 onClick={handleCopy}
                 className="ancient-rus-btn-secondary rounded-lg px-3 py-1.5 text-xs font-medium"
               >
-                {copyLabel}
+                {copyButtonLabel}
               </button>
             )}
             {activeAction && !loading && result && (
@@ -221,11 +236,30 @@ export default function ArticleProcessor() {
           </p>
         )}
 
-        {!loading && result && (
+        {!loading && result && resultType === "text" && (
           <div className="result-scroll max-h-[min(36rem,70vh)] overflow-y-auto overflow-x-hidden rounded-xl border border-scarlet/20 bg-scarlet-pale/10">
             <p className="whitespace-pre-wrap break-words px-4 py-4 text-sm leading-relaxed text-bark">
               {result}
             </p>
+          </div>
+        )}
+
+        {!loading && result && resultType === "image" && (
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-xl border border-scarlet/20 bg-scarlet-pale/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={result}
+                alt="Сгенерированная иллюстрация по теме статьи"
+                className="mx-auto h-auto max-h-[min(36rem,70vh)] w-full object-contain"
+              />
+            </div>
+            {imagePrompt && (
+              <details className="rounded-xl border border-scarlet/15 bg-scarlet-pale/15 px-4 py-3 text-sm text-bark-muted">
+                <summary className="cursor-pointer font-medium text-scarlet">Промпт для изображения</summary>
+                <p className="mt-2 break-words leading-relaxed">{imagePrompt}</p>
+              </details>
+            )}
           </div>
         )}
       </section>

@@ -8,6 +8,7 @@
 - **О чем статья?** — краткое содержание на русском
 - **Пост для Дзен** — текст для публикации
 - **Пост для Telegram** — короткий пост
+- **Иллюстрация** — промпт через OpenRouter + изображение через Hugging Face
 
 ## Локальный запуск
 
@@ -52,6 +53,8 @@ npm run dev
 | `OPENROUTER_API_KEY` | да | Ключ API OpenRouter |
 | `OPENROUTER_BASE_URL` | нет | URL chat/completions (есть значение по умолчанию) |
 | `OPENROUTER_SITE_URL` | нет | URL сайта для заголовка HTTP-Referer |
+| `HUGGINGFACE_API_KEY` | для иллюстраций | Ключ API Hugging Face |
+| `HUGGINGFACE_MODEL` | нет | Модель генерации изображений (по умолчанию Stable Diffusion XL) |
 
 ## Деплой на Vercel
 
