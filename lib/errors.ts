@@ -66,12 +66,14 @@ export const ERROR_CATALOG: Record<ErrorCode, AppErrorPayload> = {
   [ERROR_CODES.IMAGE_FAILED]: {
     code: ERROR_CODES.IMAGE_FAILED,
     title: "Ошибка иллюстрации",
-    message: "Не удалось сгенерировать изображение. Попробуйте повторить запрос через минуту.",
+    message:
+      "Не удалось сгенерировать изображение. Проверьте баланс OpenRouter или добавьте HUGGINGFACE_API_KEY на Vercel.",
   },
   [ERROR_CODES.IMAGE_UNAVAILABLE]: {
     code: ERROR_CODES.IMAGE_UNAVAILABLE,
     title: "Сервис изображений недоступен",
-    message: "Сервис генерации изображений временно недоступен. Попробуйте позже.",
+    message:
+      "Не настроен API для изображений. Добавьте HUGGINGFACE_API_KEY или OPENROUTER_API_KEY в Vercel.",
   },
   [ERROR_CODES.NETWORK]: {
     code: ERROR_CODES.NETWORK,

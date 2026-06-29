@@ -1,7 +1,7 @@
 import type { ParsedArticle } from "@/lib/parse-article";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { buildIllustrationPrompt } from "@/lib/prompts";
-import { generateImageFromPrompt } from "@/lib/huggingface";
+import { generateImageFromPrompt } from "@/lib/image-generation";
 import { callOpenRouter } from "@/lib/openrouter";
 
 export type IllustrationResult = {
