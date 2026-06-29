@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArticlePreviewCard } from "@/app/components/ArticlePreviewCard";
 import { ErrorAlert } from "@/app/components/ErrorAlert";
 import {
   ACTION_LOADING_LABELS,
@@ -9,7 +8,6 @@ import {
   type ActionType,
   type ResultType,
 } from "@/lib/actions";
-import type { ArticlePreview } from "@/lib/article-preview";
 import {
   ERROR_CODES,
   getErrorPayload,
@@ -23,13 +21,6 @@ type ApiSuccessResponse = {
   imagePrompt?: string;
   error?: AppErrorPayload;
 };
-
-type ParseResponse = {
-  preview?: ArticlePreview;
-  error?: AppErrorPayload;
-};
-
-const PREVIEW_DEBOUNCE_MS = 800;
 
 function resolveClientError(payload?: ApiSuccessResponse, fallbackCode: ErrorCode = ERROR_CODES.UNKNOWN): AppErrorPayload {
   if (payload?.error?.code && payload.error.title && payload.error.message) {
@@ -49,9 +40,6 @@ function isValidUrl(value: string): boolean {
 
 export default function ArticleProcessor() {
   const [url, setUrl] = useState("");
-  const [preview, setPreview] = useState<ArticlePreview | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
   const [result, setResult] = useState("");
   const [resultType, setResultType] = useState<ResultType>("text");
   const [imagePrompt, setImagePrompt] = useState("");
@@ -65,9 +53,6 @@ export default function ArticleProcessor() {
 
   function handleClear() {
     setUrl("");
-    setPreview(null);
-    setPreviewError(null);
-    setPreviewLoading(false);
     setResult("");
     setResultType("text");
     setImagePrompt("");
@@ -95,66 +80,6 @@ export default function ArticleProcessor() {
       resultSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [loading]);
-
-  useEffect(() => {
-    const trimmed = url.trim();
-
-    setPreview(null);
-    setPreviewError(null);
-
-    if (!trimmed || !isValidUrl(trimmed)) {
-      setPreviewLoading(false);
-      return;
-    }
-
-    setPreviewLoading(true);
-
-    let cancelled = false;
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await fetch("/api/parse", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: trimmed }),
-        });
-
-        if (cancelled) return;
-
-        const raw = await response.text();
-        let data: ParseResponse = {};
-
-        try {
-          data = raw ? (JSON.parse(raw) as ParseResponse) : {};
-        } catch {
-          setPreviewError("Не удалось загрузить предпросмотр.");
-          return;
-        }
-
-        if (!response.ok) {
-          setPreviewError(data.error?.message ?? "Не удалось загрузить предпросмотр.");
-          return;
-        }
-
-        if (data.preview) {
-          setPreview(data.preview);
-        }
-      } catch {
-        if (!cancelled) {
-          setPreviewError("Не удалось загрузить предпросмотр.");
-        }
-      } finally {
-        if (!cancelled) {
-          setPreviewLoading(false);
-        }
-      }
-    }, PREVIEW_DEBOUNCE_MS);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-      setPreviewLoading(false);
-    };
-  }, [url]);
 
   async function handleTextAction(action: Exclude<ActionType, "illustration">) {
     setError(null);
@@ -267,7 +192,7 @@ export default function ArticleProcessor() {
   }
 
   const isDisabled = !url.trim() || loading || !isValidUrl(url.trim());
-  const hasContent = Boolean(url || preview || result || error || activeAction || imagePrompt);
+  const hasContent = Boolean(url || result || error || activeAction || imagePrompt);
   const copyButtonLabel = resultType === "image" ? (copyLabel === "Копировать" ? "Копировать промпт" : copyLabel) : copyLabel;
 
   return (
@@ -304,8 +229,6 @@ export default function ArticleProcessor() {
           placeholder="https://example.fr/article..."
           className="ancient-rus-input w-full min-w-0 rounded-xl border border-border-scarlet/55 bg-scarlet-pale/15 px-4 py-3 text-base text-bark break-all placeholder:text-bark-muted/60 sm:text-sm"
         />
-
-        <ArticlePreviewCard preview={preview} loading={previewLoading} error={previewError} />
 
         <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {ACTIONS.map((action) => {
