@@ -29,6 +29,7 @@
 body {
   color: var(--color-bark);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Небо → ржаное поле → луг, с алыми акцентами */
