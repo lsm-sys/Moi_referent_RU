@@ -23,6 +23,11 @@ export const ACTION_LOADING_LABELS: Record<ActionType, string> = {
   illustration: "Создаю промпт и генерирую иллюстрацию...",
 };
 
+export const ILLUSTRATION_PHASE_LABELS = {
+  prompt: "Создаю промпт для изображения...",
+  image: "Генерирую иллюстрацию...",
+} as const;
+
 export const ACTIONS: { id: ActionType; label: string; description: string }[] = (
   Object.keys(ACTION_LABELS) as ActionType[]
 ).map((id) => ({

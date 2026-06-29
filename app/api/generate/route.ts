@@ -6,13 +6,13 @@ import {
   createErrorResponse,
   getErrorPayload,
 } from "@/lib/errors";
-import { generateArticleIllustration } from "@/lib/illustration";
+import { getArticleByUrl } from "@/lib/get-article";
 import {
   generateDzenPost,
   generateTelegramPost,
   summarizeArticle,
 } from "@/lib/openrouter";
-import { fetchAndParseArticle, type ParsedArticle } from "@/lib/parse-article";
+import type { ParsedArticle } from "@/lib/parse-article";
 
 export const maxDuration = 60;
 
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!ACTION_LABELS[action]) {
+  if (!ACTION_LABELS[action] || action === "illustration") {
     return NextResponse.json(
       { error: getErrorPayload(ERROR_CODES.UNKNOWN_ACTION) },
       { status: 400 },
@@ -64,21 +64,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const parsed = await fetchAndParseArticle(url);
-
-    if (action === "illustration") {
-      const illustration = await generateArticleIllustration(parsed);
-
-      return NextResponse.json({
-        action,
-        resultType: illustration.resultType satisfies ResultType,
-        result: illustration.result,
-        imagePrompt: illustration.imagePrompt,
-      });
-    }
-
+    const { article } = await getArticleByUrl(url);
     const handler = TEXT_ACTION_HANDLERS[action];
-    const result = await handler(parsed);
+    const result = await handler(article);
 
     return NextResponse.json({
       action,

@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArticlePreviewCard } from "@/app/components/ArticlePreviewCard";
 import { ErrorAlert } from "@/app/components/ErrorAlert";
 import {
   ACTION_LOADING_LABELS,
   ACTIONS,
+  ILLUSTRATION_PHASE_LABELS,
   type ActionType,
   type ResultType,
 } from "@/lib/actions";
+import type { ArticlePreview } from "@/lib/article-preview";
 import {
   ERROR_CODES,
   getErrorPayload,
@@ -22,6 +25,20 @@ type ApiSuccessResponse = {
   error?: AppErrorPayload;
 };
 
+type IllustrationJobResponse = ApiSuccessResponse & {
+  jobId?: string;
+  status?: "processing" | "completed" | "failed";
+  phase?: "prompt" | "image";
+};
+
+type ParseResponse = {
+  preview?: ArticlePreview;
+  error?: AppErrorPayload;
+};
+
+const PREVIEW_DEBOUNCE_MS = 800;
+const ILLUSTRATION_POLL_MS = 2000;
+
 function resolveClientError(payload?: ApiSuccessResponse, fallbackCode: ErrorCode = ERROR_CODES.UNKNOWN): AppErrorPayload {
   if (payload?.error?.code && payload.error.title && payload.error.message) {
     return payload.error;
@@ -29,21 +46,47 @@ function resolveClientError(payload?: ApiSuccessResponse, fallbackCode: ErrorCod
   return getErrorPayload(fallbackCode);
 }
 
+function isValidUrl(value: string): boolean {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export default function ArticleProcessor() {
   const [url, setUrl] = useState("");
+  const [preview, setPreview] = useState<ArticlePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [result, setResult] = useState("");
   const [resultType, setResultType] = useState<ResultType>("text");
   const [imagePrompt, setImagePrompt] = useState("");
   const [activeAction, setActiveAction] = useState<ActionType | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState("Обработка...");
   const [error, setError] = useState<AppErrorPayload | null>(null);
   const [copyLabel, setCopyLabel] = useState("Копировать");
 
   const resultSectionRef = useRef<HTMLElement>(null);
   const shouldScrollToResultRef = useRef(false);
+  const pollRef = useRef<{ cancelled: boolean; timer?: number }>({ cancelled: false });
+
+  function stopPolling() {
+    pollRef.current.cancelled = true;
+    if (pollRef.current.timer) {
+      window.clearTimeout(pollRef.current.timer);
+      pollRef.current.timer = undefined;
+    }
+  }
 
   function handleClear() {
+    stopPolling();
     setUrl("");
+    setPreview(null);
+    setPreviewError(null);
+    setPreviewLoading(false);
     setResult("");
     setResultType("text");
     setImagePrompt("");
@@ -68,6 +111,10 @@ export default function ArticleProcessor() {
   }
 
   useEffect(() => {
+    return () => stopPolling();
+  }, []);
+
+  useEffect(() => {
     if (!shouldScrollToResultRef.current || loading || !result) {
       return;
     }
@@ -76,7 +123,115 @@ export default function ArticleProcessor() {
     resultSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [result, loading]);
 
-  async function handleAction(action: ActionType) {
+  useEffect(() => {
+    const trimmed = url.trim();
+
+    setPreview(null);
+    setPreviewError(null);
+
+    if (!trimmed || !isValidUrl(trimmed)) {
+      setPreviewLoading(false);
+      return;
+    }
+
+    setPreviewLoading(true);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/api/parse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: trimmed }),
+        });
+
+        const raw = await response.text();
+        let data: ParseResponse = {};
+
+        try {
+          data = raw ? (JSON.parse(raw) as ParseResponse) : {};
+        } catch {
+          setPreviewError("Не удалось загрузить предпросмотр.");
+          return;
+        }
+
+        if (!response.ok) {
+          setPreviewError(data.error?.message ?? "Не удалось загрузить предпросмотр.");
+          return;
+        }
+
+        if (data.preview) {
+          setPreview(data.preview);
+        }
+      } catch {
+        setPreviewError("Не удалось загрузить предпросмотр.");
+      } finally {
+        setPreviewLoading(false);
+      }
+    }, PREVIEW_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [url]);
+
+  async function pollIllustrationJob(jobId: string): Promise<void> {
+    pollRef.current.cancelled = false;
+
+    const poll = async (): Promise<void> => {
+      if (pollRef.current.cancelled) return;
+
+      try {
+        const response = await fetch(`/api/illustrate/${jobId}`);
+        const raw = await response.text();
+        let data: IllustrationJobResponse = {};
+
+        try {
+          data = raw ? (JSON.parse(raw) as IllustrationJobResponse) : {};
+        } catch {
+          setError(getErrorPayload(ERROR_CODES.NETWORK));
+          setLoading(false);
+          return;
+        }
+
+        if (!response.ok) {
+          setError(resolveClientError(data, ERROR_CODES.UNKNOWN));
+          setLoading(false);
+          return;
+        }
+
+        if (data.status === "processing") {
+          setLoadingLabel(
+            data.phase === "image"
+              ? ILLUSTRATION_PHASE_LABELS.image
+              : ILLUSTRATION_PHASE_LABELS.prompt,
+          );
+
+          pollRef.current.timer = window.setTimeout(() => {
+            void poll();
+          }, ILLUSTRATION_POLL_MS);
+          return;
+        }
+
+        if (data.status === "failed") {
+          setError(data.error ?? getErrorPayload(ERROR_CODES.IMAGE_FAILED));
+          setLoading(false);
+          return;
+        }
+
+        const nextResult = typeof data.result === "string" ? data.result : "";
+        shouldScrollToResultRef.current = Boolean(nextResult);
+        setResultType("image");
+        setResult(nextResult);
+        setImagePrompt(typeof data.imagePrompt === "string" ? data.imagePrompt : "");
+        setLoading(false);
+      } catch {
+        setError(getErrorPayload(ERROR_CODES.NETWORK));
+        setLoading(false);
+      }
+    };
+
+    await poll();
+  }
+
+  async function handleTextAction(action: Exclude<ActionType, "illustration">) {
     setError(null);
     setResult("");
     setResultType("text");
@@ -84,6 +239,7 @@ export default function ArticleProcessor() {
     setCopyLabel("Копировать");
     setActiveAction(action);
     setLoading(true);
+    setLoadingLabel(ACTION_LOADING_LABELS[action]);
     shouldScrollToResultRef.current = false;
 
     try {
@@ -118,12 +274,9 @@ export default function ArticleProcessor() {
       }
 
       const nextResult = typeof data.result === "string" ? data.result : "";
-      const nextResultType = data.resultType === "image" ? "image" : "text";
-
       shouldScrollToResultRef.current = Boolean(nextResult);
-      setResultType(nextResultType);
+      setResultType("text");
       setResult(nextResult);
-      setImagePrompt(typeof data.imagePrompt === "string" ? data.imagePrompt : "");
     } catch {
       setError(getErrorPayload(ERROR_CODES.NETWORK));
     } finally {
@@ -131,9 +284,66 @@ export default function ArticleProcessor() {
     }
   }
 
-  const isDisabled = !url.trim() || loading;
-  const loadingLabel = activeAction ? ACTION_LOADING_LABELS[activeAction] : "Обработка...";
-  const hasContent = Boolean(url || result || error || activeAction || imagePrompt);
+  async function handleIllustrationAction() {
+    stopPolling();
+    setError(null);
+    setResult("");
+    setResultType("text");
+    setImagePrompt("");
+    setCopyLabel("Копировать");
+    setActiveAction("illustration");
+    setLoading(true);
+    setLoadingLabel(ILLUSTRATION_PHASE_LABELS.prompt);
+    shouldScrollToResultRef.current = false;
+
+    try {
+      const response = await fetch("/api/illustrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+
+      const raw = await response.text();
+      let data: IllustrationJobResponse = {};
+
+      try {
+        data = raw ? (JSON.parse(raw) as IllustrationJobResponse) : {};
+      } catch {
+        setError(getErrorPayload(ERROR_CODES.NETWORK));
+        setLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        setError(resolveClientError(data, ERROR_CODES.IMAGE_FAILED));
+        setLoading(false);
+        return;
+      }
+
+      if (!data.jobId) {
+        setError(getErrorPayload(ERROR_CODES.IMAGE_FAILED));
+        setLoading(false);
+        return;
+      }
+
+      await pollIllustrationJob(data.jobId);
+    } catch {
+      setError(getErrorPayload(ERROR_CODES.NETWORK));
+      setLoading(false);
+    }
+  }
+
+  function handleAction(action: ActionType) {
+    if (action === "illustration") {
+      void handleIllustrationAction();
+      return;
+    }
+
+    void handleTextAction(action);
+  }
+
+  const isDisabled = !url.trim() || loading || previewLoading;
+  const hasContent = Boolean(url || preview || result || error || activeAction || imagePrompt);
   const copyButtonLabel = resultType === "image" ? (copyLabel === "Копировать" ? "Копировать промпт" : copyLabel) : copyLabel;
 
   return (
@@ -170,6 +380,8 @@ export default function ArticleProcessor() {
           placeholder="https://example.fr/article..."
           className="ancient-rus-input w-full min-w-0 rounded-xl border border-border-scarlet/55 bg-scarlet-pale/15 px-4 py-3 text-base text-bark break-all placeholder:text-bark-muted/60 sm:text-sm"
         />
+
+        <ArticlePreviewCard preview={preview} loading={previewLoading} error={previewError} />
 
         <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {ACTIONS.map((action) => {
