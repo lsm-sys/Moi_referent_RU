@@ -230,7 +230,7 @@ export default function ArticleProcessor() {
           className="ancient-rus-input w-full min-w-0 rounded-xl border border-border-scarlet/55 bg-scarlet-pale/15 px-4 py-3 text-base text-bark break-all placeholder:text-bark-muted/60 sm:text-sm"
         />
 
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {ACTIONS.map((action) => {
             const isActive = loading && activeAction === action.id;
 
